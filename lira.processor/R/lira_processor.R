@@ -22,7 +22,7 @@ launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FA
 	#.param
 	#.pdf
 
-#Extract data and formmat to array/matrix
+#Extract data and format to array/matrix
 
 #Read in FITS files
 	obs <- FITSio::readFITS(obsFile)

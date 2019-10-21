@@ -2,15 +2,16 @@
 #library(parallel)
 #source('./lira_processor.R',chdir=TRUE)
 
+
+# An operator similar to .format in python
 `%--%` <- function(x, y) {
 
   do.call(sprintf, c(list(x), y))
 
 }
 
+# Reads the YAML config file and return the config
 get_config = function(config_file){
-    #read the YAML config file and return the config
-    #sprintf()
     if(!file.exists(config_file)){
         stop("File '%s' doesnot exist: " %--% c(config_file))
     }
@@ -18,9 +19,9 @@ get_config = function(config_file){
     return(yaml::read_yaml(config_file))
 }
 
+# Tarnish the configuration object. Perform existeny checks on the required params and provide
+# defaults for the optional params if not specified
 process_config = function(config){
-    #Use a configuration objet to setup LIRA to run on multiple cores
-
     #check for required objects
     required_params = c('regions','obs_file','psf_file','null_file','replica_im_template','n_replicas')
     for (param in required_params){
@@ -59,12 +60,17 @@ process_config = function(config){
     return(config)
 }
 
+# Generate a status list object that functions can return to notify of success/failure
+# Obj keys: status_code, err_msg
 generate.status = function(status_code,err_msg){
     return(
             list(status_code=status_code,err_msg=err_msg)
         )
 }
 
+# The processed config object will contain all the images that are to be compared 
+# against the baseline model. An array of payloads each which can be individually  
+# processed by LIRA are generated
 generate.payloads = function(processed_config){
     all_obs_files = processed_config[['all_obs_files']]
 
@@ -82,6 +88,7 @@ generate.payloads = function(processed_config){
     return(payloads)
 }
 
+# Check if all the files required by LIRA exist on the disk
 payload.consistency_check = function(payload){
     #check if all the files in the payload exist
     required_files = c('obs_file','psf_file','null_file')
@@ -102,6 +109,8 @@ payload.consistency_check = function(payload){
     return(generate.status(0,''))
 }
 
+# This function is a wrapper around a slightly modified version of KMc's liraOutput function
+# Accepts a payload and runs LIRA on it. 
 run_LIRA = function(payload){
     #consistency checks of the files
     consistency = payload.consistency_check(payload)
