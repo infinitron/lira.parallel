@@ -32,25 +32,37 @@ detect_sources_LIRA = function(){
 
     config.file = 'config.yaml'
     config = get_config(config.file)
-    payloads = generate.payloads(
-    process_config(
-            config
-        )
-    )
+    config = process_config(config)
 
-    cluster = parallel::makeCluster(config$n_cores)
+    #generate the pixel masks
+    cat('Generating pixel masks...')
+    masks = generate.mask_files(config)
+    if(masks$status$status_code !=0){
+        return(list(output=NULL,status=status))
+    }
+    cat('Done\n')
+    #print('Mask files:')
+    #print(masks$mask_files)
+    payloads = generate.payloads(config)
+
+    cat('Running LIRA on all the images...')
+    cluster = parallel::makeCluster(config$n_cores
+                #,outfile=""
+                )
     parallel::clusterEvalQ(cluster,{
-    #source('utilities.R')
-    #    source('lira_processor.R')
-    library(FITSio)
-    library(lira)
+        library(FITSio)
+        library(lira)
     })
     
-    #run_LIRA(payloads[[1]])
-    #print('ok')
-    results = parallel::parSapply(cluster,payloads,run_LIRA)
+    results = parallel::parLapply(cluster,payloads,run_LIRA)
+    cat('Done\n')
+    cat('Generating the distributions of Xi...')
+    compute_and_save_xi_and_p.ul(results,config,masks)
+    #cat('Done\n')
+    
     parallel::stopCluster(cluster)
-    return(results)
+    print('You\'re welcome!')
+    return(generate.status(0,''))
 
 }
 

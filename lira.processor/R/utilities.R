@@ -57,6 +57,10 @@ process_config = function(config){
         }
     }
 
+    if (!dir.exists(config$output_dir)){
+        dir.create(config$output_dir)
+    }
+
     return(config)
 }
 
@@ -88,6 +92,32 @@ generate.payloads = function(processed_config){
     return(payloads)
 }
 
+#Generate a pixel mask for each mask file
+generate.mask_files = function(config){
+    obs_file = config$obs_file
+    regions = config$regions
+    masks = c()
+    region_names = c()
+
+    for(region in regions){
+        region_name = tools::file_path_sans_ext(region)
+        region_names = c(region_names,region_name)
+        output = generate_pixel_mask_from_region_file(obs_file,region)
+        if(output$status$status_code !=0){
+            return(output$status)
+        }
+        masks = c(masks,output$mask_file)
+    }
+
+    return(
+        list(
+            mask_files=masks,
+            status=generate.status(0,''),
+            region_names=region_names
+        )
+    )
+}
+
 # Check if all the files required by LIRA exist on the disk
 payload.consistency_check = function(payload){
     #check if all the files in the payload exist
@@ -95,7 +125,7 @@ payload.consistency_check = function(payload){
     for (file in required_files){
         
         if(!file.exists(payload[[file]])){
-        print(payload[[file]])
+            print(payload[[file]])
             return(generate.status(-1,"File %s doesn't exist" %--% c(payload[[file]])))
         }
     }
@@ -136,3 +166,18 @@ run_LIRA = function(payload){
         )
     )
 }
+
+get_output_images = function(results){
+    output_images = c()
+    for(result in results){
+        if(result$status$status_code != 0){
+            #ignore this image
+            print(result$status$err_msg)
+            next
+        }
+        output_images = c(output_images,result$output$out_images_file)
+    }
+
+    return(output_images)
+}
+

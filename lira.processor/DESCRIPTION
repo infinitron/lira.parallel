@@ -16,5 +16,8 @@ Imports:
     FITSio,
     yaml,
     parallel,
-    tools
+    tools,
+    reticulate,
+    sm,
+    spatstat
 RoxygenNote: 6.1.1
