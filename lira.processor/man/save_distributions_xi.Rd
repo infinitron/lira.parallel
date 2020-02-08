@@ -2,10 +2,10 @@
 % Please edit documentation in R/xi_p_computation.R
 \name{save_distributions_xi}
 \alias{save_distributions_xi}
-\title{Take the distibutions of xi, save them as pdf/mat files, and compute the unpper bound on p value}
+\title{Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value}
 \usage{
 save_distributions_xi(distributions, region_name, out_dir)
 }
 \description{
-Take the distibutions of xi, save them as pdf/mat files, and compute the unpper bound on p value
+Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
 }

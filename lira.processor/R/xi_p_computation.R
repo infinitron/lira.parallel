@@ -77,7 +77,7 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
             if(im_counts==0) {
                 log_xi = -8.5 #some far away value so as to not to interfere with the rest of the distribution
             }else{
-                log_xi = log(im_counts/(im_counts+total_null_counts),10)
+                log_xi = log(im_counts/(im_counts+null_counts),10)
             }
             
 
@@ -88,7 +88,7 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
 
     }
 
-    return(list(output=xi.all_iter,status=generate.status(0,''),total_null_counts=total_null_counts))
+    return(list(output=xi.all_iter,status=generate.status(0,''),total_null_counts=null_counts))
 }
 
 generate.distribution_xi.wrapper = function(payload){

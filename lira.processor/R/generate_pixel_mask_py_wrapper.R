@@ -9,12 +9,12 @@ generate_pixel_mask_from_region_file = function(image_file,reg_file){
     # It will be added manually for now until the root cause is known
     sys_py = reticulate::import("sys",convert=FALSE)
     ascds_contrib_path = Sys.getenv("ASCDS_CONTRIB")
-    sys_py$path$append(file.path(ascds_contrib_path,"/lib/python3.5/site-packages/")) #temporary workaround
+    sys_py$path$append(file.path(ascds_contrib_path,"lib/python3.5/site-packages")) #temporary workaround
     ascds_lib_path=Sys.getenv("ASCDS_LIB") #another temporary workaround
-    sys_py$path$append(file.path(ascds_lib_path,"/python3.5/site-packages"))
+    sys_py$path$append(file.path(ascds_lib_path,"python3.5/site-packages"))
+    sys_py$path$append(file.path(ascds_lib_path,"python3.5/site-packages/paramio"))
+    ciao.runtool_py = reticulate::import("ciao_contrib.runtool",convert=FALSE)
     
-    ciao.runtool_py = reticulate::import("ciao_contrib.runtool")
-
     os_py = reticulate::import("os")
     pathlib_py = reticulate::import("pathlib")
     tempfile_py = reticulate::import("tempfile")
