@@ -4,7 +4,7 @@
 \alias{generate.distribution_xi}
 \title{Compute the xi for all the iterations in each image}
 \usage{
-generate.distribution_xi(images, mask_file, null_file, n_iter)
+generate.distribution_xi(images, mask_file, null_file, n_iter, thin = 1)
 }
 \description{
 Compute the xi for all the iterations in each image
