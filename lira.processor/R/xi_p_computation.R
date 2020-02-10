@@ -62,14 +62,12 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
         }
 
         im_mat = np$loadtxt(image_file)
-        #print(dim(im_mat))
+
         im_mat_obj = list(data_mat=im_mat,nrows=dim(im_mat)[[1]],ncols=dim(im_mat)[[2]])
 
 
         xi.iteration_wise = c()
-        #null_counts=1
-        #print(im_mat_obj$nrows)
-        #print(null_nrows)
+
         for(i in seq(1,im_mat_obj$nrows,null_nrows)){
 
             image_iter = im_mat_obj$data_mat[i:(i+null_nrows-1),]
@@ -84,7 +82,7 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
 
             xi.iteration_wise = c(xi.iteration_wise,log_xi)
         }
-        #print(length(xi.iteration_wise))
+
         xi.all_iter[im_number,] = xi.iteration_wise
 
     }
@@ -120,20 +118,12 @@ save_distributions_xi = function(distributions,region_name,out_dir){
     #compute the upper bound
     gamma = 0.005
     c = quantile(10^(all_dist_vec[1,(ncols+1):(nrows*ncols)]),1-gamma)
-
-    #print('c1')
-    #print(c)
-
-    #print('c2')
     c2=spatstat::quantile.density(density(10^(all_dist_vec[1,(ncols+1):(nrows*ncols)])),1-gamma)
-    #print(c2)
     
-
     t_c.yobs = 1/(ncols)*sum(10^(all_dist_vec[,1:ncols])>=c)
     t_c2.yobs = 1/(ncols)*sum(10^(all_dist_vec[,1:ncols])>=c2)
 
-    #print(t_c.yobs)
-    cat("c: ",c,", c2: ",c2,", tc: ",t_c.yobs,", tc2: ",t_c2.yobs,"\n")
+    #cat("c: ",c,", c2: ",c2,", tc: ",t_c.yobs,", tc2: ",t_c2.yobs,"\n")
     if(t_c.yobs==0) t_c.yobs=gamma
     if(t_c2.yobs==0) t_c2.yobs=gamma
     p.value.upper_lim = gamma/t_c.yobs
@@ -162,14 +152,10 @@ save_distributions_xi = function(distributions,region_name,out_dir){
     #xlim = c(-10,0)
     #ylim=c(0,1)
     ngrid=200
-    #print(all_dist_vec)
-    #print(length(groups))
-    #print(length(all_dist_vec))
 
 
     
     #save the distribution as a pdf
-    #print('saving dist')
     pdf(file.path(out_dir,paste(region_name,".pdf",sep="")), width=12,height=4.25)
         sm::sm.density.compare(all_dist_vec,groups,col=colors,lty=line_types,lwd=line_widths
                 #,xlim=xlim
@@ -226,15 +212,10 @@ compute_and_save_xi_and_p.ul= function(results,config,masks){
     results = parallel::parLapply(cluster,payloads,generate.distribution_xi.wrapper)
 
 
-    #iterate over the results and get the upper limits
     cat('Computing the p-values\n')
-    #print('Displaying upper bounds on p values')
     cat('---------------------------------','\n')
     cat("Region","\t","p1","\t","p2","\n")
     for(i in 1:n_masks){
-        #print('total null counts')
-        #print(results[[i]]$total_null_counts)
-        #print(dim(results[[i]]$output))
         xi.processed = save_distributions_xi(results[[i]]$output,region_names[[i]],config$output_dir)
 
         cat(region_names[[i]]
