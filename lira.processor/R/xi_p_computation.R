@@ -22,10 +22,10 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
 
 
     #print(images)
-    print('in')
+    #print('in')
     #read each mask in to a matrix
     region_mat_obj = get_matrix_from_fits(mask_file)
-    print('out')
+    #print('out')
     #print(names(region_mat_obj))
     if(is.null(region_mat_obj$data_mat)){
         print('File %s does not exist' %--% mask_file )
@@ -73,7 +73,8 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
         for(i in seq(1,im_mat_obj$nrows,null_nrows)){
 
             image_iter = im_mat_obj$data_mat[i:(i+null_nrows-1),]
-            im_counts = sum(image_iter * region_mat_obj$data_mat)
+            #transpose the matrix read from numpy since the LIRA output images are joined side ways and not top bottom
+            im_counts = sum(t(image_iter) * region_mat_obj$data_mat)
             if(im_counts==0) {
                 log_xi = -8.5 #some far away value so as to not to interfere with the rest of the distribution
             }else{
@@ -107,13 +108,13 @@ save_distributions_xi = function(distributions,region_name,out_dir){
 
     #print('in')
     #first row contains the obs vs baseline
-    #the rest would contain replicas vs baselines
+    #the rest would contain replicas vs baseline
 
     dims = dim(distributions)
     nrows = dims[[1]]
     ncols = dims[[2]]
 
-    # log transform the vector
+    # transform the vector to have all the distributions on a single row
     all_dist_vec = matrix(t(distributions),nrow=1)
 
     #compute the upper bound
@@ -132,10 +133,14 @@ save_distributions_xi = function(distributions,region_name,out_dir){
     t_c2.yobs = 1/(ncols)*sum(10^(all_dist_vec[,1:ncols])>=c2)
 
     #print(t_c.yobs)
+    cat("c: ",c,", c2: ",c2,", tc: ",t_c.yobs,", tc2: ",t_c2.yobs,"\n")
     if(t_c.yobs==0) t_c.yobs=gamma
     if(t_c2.yobs==0) t_c2.yobs=gamma
     p.value.upper_lim = gamma/t_c.yobs
     p.value.upper_lim2 = gamma/t_c2.yobs
+
+    if(p.value.upper_lim>1)p.value.upper_lim=1
+    if(p.value.upper_lim2>1)p.value.upper_lim2=1
 
 
     groups = rep(1:nrows,rep(ncols,nrows))
@@ -173,8 +178,8 @@ save_distributions_xi = function(distributions,region_name,out_dir){
     dev.off()
 
     #also dump the data to a file
-    write(all_dist_vec,file.path(out_dir,paste(region_name,"_all_dist.out",sep="")))
-    write(groups,file.path(out_dir,paste(region_name,"_groups.out",sep="")))
+    cat(all_dist_vec,file=file.path(out_dir,paste(region_name,"_all_dist.out",sep="")))
+    cat(groups,file=file.path(out_dir,paste(region_name,"_groups.out",sep="")))
 
     return(list(
         p_value=p.value.upper_lim
@@ -206,7 +211,8 @@ compute_and_save_xi_and_p.ul= function(results,config,masks){
             ,thin=thin)
     }
 
-    cluster = parallel::makeCluster(config$n_cores
+    cluster = parallel::makeCluster(1
+        #config$n_cores
                     #,outfile=""
                     )
     parallel::clusterEvalQ(cluster,{

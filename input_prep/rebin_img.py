@@ -36,13 +36,19 @@ def rebin_img(infile="evt2.fits", outfile="test.fits",
     #xmax = xcen3 + (N*B+B/2)*0.5
     #ymin = ycen3 - (N*B+B/2)*0.5
     #ymax = ycen3 + (N*B+B/2)*0.5
+    
+    xmin = xcen3 - (N*B)*0.5
+    xmax = xcen3 + (N*B)*0.5
+    ymin = ycen3 - (N*B)*0.5
+    ymax = ycen3 + (N*B)*0.5
 
-    xmin = floor(xcen3)+0.5 - (N*B)*0.5
-    xmax = floor(xcen3)+0.5 + (N*B)*0.5
-    ymin = floor(ycen3)+0.5 - (N*B)*0.5
-    ymax = floor(ycen3)+0.5 + (N*B)*0.5
+    #xmin = floor(xcen3)+0.5 - (N*B)*0.5
+    #xmax = floor(xcen3)+0.5 + (N*B)*0.5
+    #ymin = floor(ycen3)+0.5 - (N*B)*0.5
+    #ymax = floor(ycen3)+0.5 + (N*B)*0.5
 
     newfile = "{}[bin x={}:{}:{},y={}:{}:{}][opt type=i4]".format(infile, xmin, xmax, B, ymin, ymax, B)
+    print(newfile)
 
     dmcopy(newfile, outfile, clobber=True)
     
