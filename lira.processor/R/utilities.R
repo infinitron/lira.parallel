@@ -172,7 +172,7 @@ get_output_images = function(results){
     for(result in results){
         if(result$status$status_code != 0){
             #ignore this image
-            print(result$status$err_msg)
+            #print(result$status$err_msg)
             next
         }
         output_images = c(output_images,result$output$out_images_file)

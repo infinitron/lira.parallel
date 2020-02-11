@@ -41,8 +41,6 @@ detect_sources_LIRA = function(){
         return(list(output=NULL,status=status))
     }
     cat('Done\n')
-    #print('Mask files:')
-    #print(masks$mask_files)
     payloads = generate.payloads(config)
 
     cat('Running LIRA on all the images...')
@@ -55,14 +53,14 @@ detect_sources_LIRA = function(){
     })
     
     results = parallel::parLapply(cluster,payloads,run_LIRA)
+    parallel::stopCluster(cluster)
     cat('Done\n')
     cat('Generating the distributions of Xi...')
-    compute_and_save_xi_and_p.ul(results,config,masks)
-    #cat('Done\n')
+    #compute_and_save_xi_and_p.ul(results,config,masks)
+    compute_and_save_xi_and_p_ul_t(results,config,masks)
     
-    parallel::stopCluster(cluster)
-    print('You\'re welcome!')
-    return(generate.status(0,''))
+    cat('\nYeah, you\'re welcome!\n')
+    return("")
 
 }
 
