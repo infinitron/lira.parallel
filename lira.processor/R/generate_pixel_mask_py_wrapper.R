@@ -7,13 +7,13 @@ generate_pixel_mask_from_region_file = function(image_file,reg_file){
     
     #NOTE: for some reason reticulate doesn't find the contrib scripts
     # It will be added manually for now until the root cause is known
-    sys_py = reticulate::import("sys",convert=FALSE)
+    #syspy = reticulate::import("sys",convert=FALSE)
     ascds_contrib_path = Sys.getenv("ASCDS_CONTRIB")
-    sys_py$path$append(file.path(ascds_contrib_path,"lib/python3.5/site-packages")) #temporary workaround
+    syspy$path$append(file.path(ascds_contrib_path,"lib/python3.5/site-packages")) #temporary workaround
     ascds_lib_path=Sys.getenv("ASCDS_LIB") #another temporary workaround
-    sys_py$path$append(file.path(ascds_lib_path,"python3.5/site-packages"))
-    sys_py$path$append(file.path(ascds_lib_path,"python3.5/site-packages/paramio"))
-    ciao.runtool_py = reticulate::import("ciao_contrib.runtool",convert=FALSE)
+    syspy$path$append(file.path(ascds_lib_path,"python3.5/site-packages"))
+    syspy$path$append(file.path(ascds_lib_path,"python3.5/site-packages/paramio"))
+    #ciao.runtool_py = reticulate::import("ciao_contrib.runtool",convert=FALSE)
     
     os_py = reticulate::import("os")
     pathlib_py = reticulate::import("pathlib")

@@ -53,13 +53,14 @@ detect_sources_LIRA = function(){
     })
     
     results = parallel::parLapply(cluster,payloads,run_LIRA)
+
     parallel::stopCluster(cluster)
     cat('Done\n')
-    cat('Generating the distributions of Xi...')
     #compute_and_save_xi_and_p.ul(results,config,masks)
     compute_and_save_xi_and_p_ul_t(results,config,masks)
     
-    cat('\nYeah, you\'re welcome!\n')
+    cat('Done')
+    cat('\n\n\n\nYeah, you\'re welcome!\n')
     return("")
 
 }
