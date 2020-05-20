@@ -2,15 +2,13 @@
 
 import yaml
 from rebin_img import rebin_img
+from rebin_psf import rebin_psf
 from ciao_contrib.runtool import *
 from sherpa.astro.ui import *
 from sherpa_contrib.chart import *
 from sim_image import sim_image
 import os
 
-
-        
- 
 def prepare_the_params(params):
     #parse the params and return the 
     param_def = get_param_definition()
@@ -24,10 +22,10 @@ def prepare_the_params(params):
     return param_def
                 
 def get_param_definition():
-    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size']
-    param_types = ['str','float','str','str','int','int','int','int']
-    param_req = [True,False,True,False,True,False,False,True]
-    default_params = [None, 0.5,None,None,50,50,64,32]
+    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size','nH']
+    param_types = ['str','float','str','str','int','int','int','int','float']
+    param_req = [True,False,True,False,True,False,False,True,False]
+    default_params = [None, 0.5,None,None,50,50,64,32,None]
 
     param_definition = {}
     for i in range(0,len(param_list)):
@@ -39,7 +37,7 @@ def get_param_definition():
 def create_the_inputs(params):
     
     #create the image
-    image_file = create_image(params['evt_file']['value'],
+    image_file,core_cen = create_image(params['evt_file']['value'],
                  params['core_reg']['value'],
                  params['binsize']['value'],
                  params['inp_size']['value'])
@@ -49,12 +47,30 @@ def create_the_inputs(params):
                  params['n_psf_sims']['value'],
                  params['core_reg']['value'],
                  params['bkg_reg']['value'],
-                 params['binsize']['value'],min(params['binsize']['value'],params['psf_size']['value']))
-
-    psf_file = create_image(simulated_psf_file,
-                 params['core_reg']['value'],
                  params['binsize']['value'],
-                 params['psf_size']['value'],outfile='core_psf.fits')
+                 min(params['binsize']['value'],params['psf_size']['value']),
+                 core_cen[0],core_cen[1],
+                 params['nH']['value'])
+#
+    #psf_file,_cen = create_image('{0}[energy=500:7000]'.format(simulated_psf_file),
+    #             params['core_reg']['value'],
+    #             params['binsize']['value'],
+    #             params['psf_size']['value'],outfile='core_psf.fits')
+
+    #create_image(simulated_psf_file
+    #    ,params['core_reg']['value']
+    #    ,params['binsize']['value']
+    #    ,params['psf_size']['value']
+    #    ,outfile='core_psf.fits')
+
+    #rebin the PSF to match the image grid
+    rebin_psf('{0}[energy=500:7000]'.format(simulated_psf_file),
+            outfile='core_psf.fits',
+            binsize=params['binsize']['value'],
+            nsize=params['psf_size']['value'],
+            xcen=core_cen[0],
+            ycen=core_cen[1])
+    
 
     #create the baseline image and simulate images from it
     simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'])
@@ -88,13 +104,29 @@ def create_image(evt_file,reg_file,binsize,nsize,outfile=None):
     if(outfile is None):outfile = "img_{0}x{1}_{2}.fits".format(nsize,nsize,binsize)
     
     print("Creating the input image file")
-    rebin_img(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
+    centroid = rebin_img(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
               binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
     
-    return outfile
+    return (outfile,vals)
+    
+def create_psf_image(evt_file,reg_file,binsize,nsize,outfile=None):
+    dmstat.punlearn()
+    #get the centroid of the image
+    dmstat("{0}[sky=region({1})][cols sky]".format(evt_file,reg_file))
+    
+    vals = [float(x) for x in dmstat.out_mean.split(',')]
+    xval=vals[0]
+    yval=vals[1]
 
+    if(outfile is None):outfile = "img_{0}x{1}_{2}.fits".format(nsize,nsize,binsize)
+    
+    print("Creating the input image file")
+    centroid = rebin_psf(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
+              binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
+    
+    return (outfile,centroid)
 
-def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size):
+def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,nH=None):
     #extract the spectrum
     specextract.punlearn()
     print('Extracting the spectrum')
@@ -104,6 +136,9 @@ def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size):
     print('Fitting the spectrum')
     load_pha("core_spectrum.pi")
     set_source(xsphabs.abs1*powlaw1d.srcp1)
+    if (nH is not None) and (nH > 0.0):
+        abs1.nH=nH
+        freeze(abs1.nH)
     group_counts(1,10)
     notice(0.5,7)
     fit()
@@ -113,11 +148,15 @@ def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size):
     
     #get the ra dec from sky coords
     ra_dec = get_centroid_ra_dec(evt_file,core_reg)
+    #dmcoords.punlearn()
+    #dmcoords(evt_file,option='sky',x=xcen,y=ycen,celfmt='deg')
     
     #simulate the psf
     print('Simulating the psf')
     simulate_psf.punlearn()
-    simulate_psf(infile=evt_file,outroot="core_psf_sim",spectrum='core_flux_chart.dat',numiter=50,ra=ra_dec[0],dec=ra_dec[1],binsize=binsize,minsize=psf_size)
+    simulate_psf(infile=evt_file,outroot="core_psf_sim",spectrum='core_flux_chart.dat',numiter=npsf_sims,ra=ra_dec[0],dec=ra_dec[1],binsize=binsize
+    #,minsize=psf_size
+    )
     return 'core_psf_sim_projrays.fits'
 
             
@@ -142,6 +181,8 @@ def simulate_null_images(infile,psffile,num_sims,mcmciter=5000):
     set_sampler_opt('defaultprior', False)
     set_sampler_opt('priorshape', [True, False, False, False, False])
     set_sampler_opt('originalscale', [True, True, True, True, True])
+    if mcmciter < num_sims*100:
+        mcmciter = num_sims*100
     stats, accept, params = get_draws(1,niter=mcmciter)
     print('Simulating the null files')
     for i in range(num_sims):
