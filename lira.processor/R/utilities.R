@@ -125,8 +125,9 @@ payload.consistency_check = function(payload){
     for (file in required_files){
         
         if(!file.exists(payload[[file]])){
-            print(payload[[file]])
-            return(generate.status(-1,"File %s doesn't exist" %--% c(payload[[file]])))
+            #print(payload[[file]])
+            #return(generate.status(-1,"File %s doesn't exist" %--% c(payload[[file]])))
+            stop("File %s doesn't exist" %--% c(payload[[file]]))
         }
     }
 
@@ -144,7 +145,7 @@ payload.consistency_check = function(payload){
 run_LIRA = function(payload){
     #consistency checks of the files
     consistency = payload.consistency_check(payload)
-    if(consistency['status_code']!=0){
+    if(consistency[['status_code']]!=0){
         return(list(output=list(),status=consistency))
     }
 
@@ -155,7 +156,7 @@ run_LIRA = function(payload){
             ,psfFile=payload$psf_file
             ,outDir=payload$output_dir
             ,maxIter=payload$max_iter
-            ,alpha.init=payload$alpha_init
+            ,alpha.init=sample(payload$alpha_init)
             ,thin=payload$thin
             ,burn=payload$burn_in)
     
@@ -171,9 +172,7 @@ get_output_images = function(results){
     output_images = c()
     for(result in results){
         if(result$status$status_code != 0){
-            #ignore this image
-            #print(result$status$err_msg)
-            next
+            stop(result$status$err_msg)
         }
         output_images = c(output_images,result$output$out_images_file)
     }

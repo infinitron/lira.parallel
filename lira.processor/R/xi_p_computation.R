@@ -1,10 +1,12 @@
 # Generate distributions for Xi using the output images and masks
-get_matrix_from_fits = function(file_name){
+get_matrix_from_fits = function(file_name,fill.na=0){
     if(!file.exists(file_name)) return(list(data_mat=NULL,nrows=NULL,ncols=NULL))
 
     #readfits prints the filename. It will be suppressed
     invisible(capture.output(data <- FITSio::readFITS(file_name)))
 
+    #set all non-finite values to zero
+    data$imDat[!is.finite(data$imDat)] <- fill.na
 
     data_mat = matrix(data=data$imDat
         ,nrow=data$axDat$len[1]
@@ -215,7 +217,7 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
     }
 
     #add a mask that excludes all the regions
-    complimentary.mask <- (1- - complimentary.mask/complimentary.mask)
+    complimentary.mask <- (1- complimentary.mask/complimentary.mask)
     complimentary.mask[is.nan(complimentary.mask)] <- 1
 
     masks[["complimentary"]] <- list(
@@ -237,9 +239,15 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
     #dimension of the image 
     imsize <- null.model$nrows
     log.xi = 0
+    obs.file.flag <- 0
+    avg.obs.LIRA.image <- matrix(0,
+        nrow=null.model$nrows,
+        ncol=null.model$ncols)
 
     #iterate through each image and gather the distribution of Xi for all the masks
     for(out.imagename in images){
+
+        obs.file.flag <- obs.file.flag + 1
 
         #read the image
         if(!file.exists(out.imagename)){
@@ -249,17 +257,29 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
         #read the output image; TODO: figure out an efficient way to get output from LIRA
         image.df <- data.matrix(read.table(out.imagename))
 
+        #treat the NANs
+        image.df[!is.finite(image.df)] <- 0
+
         #for each LIRA draw in this image, compute Xi for each mask
 
         for(i in 1:n_iter){
+
+            image.this.iteration <- image.df[((i-1)*imsize+1):(i*imsize),]
+            if(obs.file.flag==1){
+                avg.obs.LIRA.image = avg.obs.LIRA.image + image.this.iteration
+            }
 
             #loop over the masks
             for(mask.name in mask_files){
 
                 #the images are joined sideways in the LIRA draws,so transpose it
-                im.counts <- sum(t(image.df[((i-1)*imsize+1):(i*imsize),]
-                ) * masks[[mask.name]]$data_mat)
+
+                im.counts <- sum(t(image.this.iteration) * masks[[mask.name]]$data_mat)
                 
+                if(!is.finite(im.counts)){
+                    im.counts <- 0
+                }
+
                 if(im.counts==0) {
                     log.xi <- -8.5
                 }
@@ -270,9 +290,23 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
             }
         }
 
+        if(obs.file.flag==1){
+            avg.obs.LIRA.image <- avg.obs.LIRA.image/n_iter
+            write_FITS_image_with_wcs(avg.obs.LIRA.image,null_file)
+        }
+
     }
     return(list(output=xi.distribution.region,status=generate.status(0,'')))
 
+}
+
+#Write a matrix to a FITS file using wcs information from another file
+write_FITS_image_with_wcs <- function(data,wcsfile.name){
+    hdul <- astropy$io$fits$open(wcsfile.name)
+    reticulate::py_set_attr(hdul[0]$header,'BITPIX',-32L)
+    reticulate::py_set_attr(hdul[0],'data',data)
+    hdul$writeto("avg_LIRA.fits",overwrite=T)
+    hdul$close()
 }
 
 save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
@@ -326,24 +360,36 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
 
     ngrid=200
 
-    #TODO: Let the user add the customization
-    pdf(file.path(out.dir,paste(region.name,".pdf",sep="")),width=12,height=4.25)
-        sm::sm.density.compare(
-            unlist(c(observed.xi.distribution,simulated.xi.distribution.all,simulated.xi.distribution.all)),
-            xi.distribution.groups,
-            col=colors,
-            lty=line.types,
-            lwd=line.widths,
-            ngrid=ngrid,
-            xlab="Log10(Xi)"
-        )
-    dev.off()
-
 
     #also dump the data to a file
     cat(c(observed.xi.distribution,simulated.xi.distribution.all,simulated.xi.distribution.all),file=file.path(out.dir,paste(region.name,"_all_dist.out",sep="")))
 
     cat(xi.distribution.groups,file=file.path(out.dir,paste(region.name,"_groups.out",sep="")))
+
+    #TODO: Let the user add the customization
+    tryCatch({
+        pdf(file.path(out.dir,paste(region.name,".pdf",sep="")),width=12,height=4.25)
+            sm::sm.density.compare(
+                unlist(c(observed.xi.distribution,simulated.xi.distribution.all,simulated.xi.distribution.all)),
+                xi.distribution.groups,
+                col=colors,
+                lty=line.types,
+                lwd=line.widths,
+                ngrid=ngrid,
+                xlab="Log10(Xi)"
+            )
+        dev.off()
+    }, warning=function(warn){
+        #do nothing
+    },error=function(err){
+        
+        cat('\nXi distribution plots will not be generated\n')
+        
+    },finally={
+        
+    })
+
+
 
     return(list(
         p_value=p.upper_lim
@@ -378,6 +424,7 @@ compute_and_save_xi_and_p_ul_t = function(results,config,masks){
     p.values = c()
     p.values2 = c()
 
+    cat('Generating the distributions of Xi...')
     for(mask in masks){
         i <- i+1
         xi.processed <- save_distribution_xi_t(
@@ -395,6 +442,11 @@ compute_and_save_xi_and_p_ul_t = function(results,config,masks){
         p.values,
         p.values2
     )))
+    cat(knitr::kable(cbind(
+        region.names,
+        p.values,
+        p.values2
+    )),file=file.path(config$output_dir,'p_ul.values.txt'))
 }
 
 compute_and_save_xi_and_p.ul= function(results,config,masks){
