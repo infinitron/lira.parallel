@@ -116,9 +116,9 @@ generate.mask_files = function(config){
 
     return(
         list(
-            mask_files <- masks,
-            status <- generate.status(0,''),
-            region_names <- region_names
+            mask_files = masks,
+            status = generate.status(0,''),
+            region_names = region_names
         )
     )
 }
