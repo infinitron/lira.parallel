@@ -1,5 +1,5 @@
 # Generate distributions for Xi using the output images and masks
-get_matrix_from_fits = function(file_name,fill.na=0){
+get_matrix_from_fits <- function(file_name,fill.na=0){
     if(!file.exists(file_name)) return(list(data_mat=NULL,nrows=NULL,ncols=NULL))
 
     #readfits prints the filename. It will be suppressed
@@ -15,21 +15,21 @@ get_matrix_from_fits = function(file_name,fill.na=0){
     return(list(data_mat=data_mat,nrows=data$axDat$len[1],ncols=data$axDat$len[2]))
 }
 
-get_matrix_from_file = function(file_name){
+get_matrix_from_file <- function(file_name){
     if(!file.exists(file_name)) return(list(data_mat=NULL,nrows=NULL,ncols=NULL))
 }
 
 
 #' Compute the xi for all the iterations in each image
 #' @export
-generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
+generate.distribution_xi <- function(images,mask_file,null_file,n_iter,thin=1){
     
 
 
     #print(images)
     #print('in')
     #read each mask in to a matrix
-    region_mat_obj = get_matrix_from_fits(mask_file)
+    region_mat_obj <- get_matrix_from_fits(mask_file)
     #print('out')
     #print(names(region_mat_obj))
     if(is.null(region_mat_obj$data_mat)){
@@ -38,64 +38,64 @@ generate.distribution_xi = function(images,mask_file,null_file,n_iter,thin=1){
     }
 
     np = reticulate::import("numpy")
-    null_mat_obj = get_matrix_from_fits(null_file)
+    null_mat_obj <- get_matrix_from_fits(null_file)
 
     
     #compute the null counts
-    nrows = null_mat_obj$nrows
-    ncols = null_mat_obj$ncols
-    mask_counts.frac = sum(region_mat_obj$data_mat)/(nrows*ncols)
-    total_null_counts = sum(null_mat_obj$data_mat) * mask_counts.frac
+    nrows <- null_mat_obj$nrows
+    ncols <- null_mat_obj$ncols
+    mask_counts.frac <- sum(region_mat_obj$data_mat)/(nrows*ncols)
+    total_null_counts <- sum(null_mat_obj$data_mat) * mask_counts.frac
     #print(total_null_counts)
-    null_counts = sum(null_mat_obj$data_mat * region_mat_obj$data_mat)
-    null_nrows = null_mat_obj$nrows
+    null_counts <- sum(null_mat_obj$data_mat * region_mat_obj$data_mat)
+    null_nrows <- null_mat_obj$nrows
 
     # For each image, compute the distribution of Xi
-    xi.distribution.region=list()
-    n_images = length(images)
-    xi.all_iter=matrix(0,nrow=n_images,ncol=as.integer(n_iter/thin))
+    xi.distribution.region <-list()
+    n_images <- length(images)
+    xi.all_iter <- matrix(0,nrow=n_images,ncol=as.integer(n_iter/thin))
 
     for(im_number in 1:n_images){
 
         #read the image
         #This image contains all the draws from LIRA
-        image_file = images[[im_number]]
+        image_file <- images[[im_number]]
 
         if(!file.exists(image_file)){
             print('File %s does not exist' %--% image_file)
             next
         }
 
-        im_mat = np$loadtxt(image_file)
+        im_mat <- np$loadtxt(image_file)
 
-        im_mat_obj = list(data_mat=im_mat,nrows=dim(im_mat)[[1]],ncols=dim(im_mat)[[2]])
+        im_mat_obj <- list(data_mat=im_mat,nrows=dim(im_mat)[[1]],ncols=dim(im_mat)[[2]])
 
 
-        xi.iteration_wise = c()
+        xi.iteration_wise <- c()
 
         for(i in seq(1,im_mat_obj$nrows,null_nrows)){
 
-            image_iter = im_mat_obj$data_mat[i:(i+null_nrows-1),]
+            image_iter <- im_mat_obj$data_mat[i:(i+null_nrows-1),]
             #transpose the matrix read from numpy since the LIRA output images are joined side ways and not top bottom
-            im_counts = sum(t(image_iter) * region_mat_obj$data_mat)
+            im_counts <- sum(t(image_iter) * region_mat_obj$data_mat)
             if(im_counts==0) {
-                log_xi = -8.5 #some far away value so as to not to interfere with the rest of the distribution
+                log_xi <- -8.5 #some far away value so as to not to interfere with the rest of the distribution
             }else{
-                log_xi = log(im_counts/(im_counts+null_counts),10)
+                log_xi <- log(im_counts/(im_counts+null_counts),10)
             }
             
 
-            xi.iteration_wise = c(xi.iteration_wise,log_xi)
+            xi.iteration_wise <- c(xi.iteration_wise,log_xi)
         }
 
-        xi.all_iter[im_number,] = xi.iteration_wise
+        xi.all_iter[im_number,] <- xi.iteration_wise
 
     }
 
     return(list(output=xi.all_iter,status=generate.status(0,''),total_null_counts=null_counts))
 }
 
-generate.distribution_xi.wrapper = function(payload){
+generate.distribution_xi.wrapper <- function(payload){
     return(
         generate.distribution_xi(payload$images
                                 ,payload$mask_file
@@ -107,7 +107,7 @@ generate.distribution_xi.wrapper = function(payload){
 
 #' Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
 #' @export
-save_distributions_xi = function(distributions,region_name,out_dir){
+save_distributions_xi <- function(distributions,region_name,out_dir){
 
     #print('in')
     #first row contains the obs vs baseline
@@ -190,7 +190,7 @@ empty_datastructure_xi_distribution <- function(images,n_iter){
 #This function takes list of output images, mask files, a null file, total number of iterations and the thinning factor
 #For each output image and for each mask file, it computes a distribution of Xi
 #Each output image is read once and computations are made on it
-generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
+generate_distribution_xi_t <- function(images,mask_files,null_file,n_iter){
     #read all the masks into an array
     masks <- list()
     #hosts the distribution of Xi for each mask
@@ -201,7 +201,7 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
     #read the null file.
     null.model <- get_matrix_from_fits(null_file)
 
-    complimentary.mask = matrix(0,
+    complimentary.mask <- matrix(0,
         nrow=null.model$nrows,
         ncol=null.model$ncols
     )
@@ -238,7 +238,7 @@ generate_distribution_xi_t = function(images,mask_files,null_file,n_iter){
     
     #dimension of the image 
     imsize <- null.model$nrows
-    log.xi = 0
+    log.xi <- 0
     obs.file.flag <- 0
     avg.obs.LIRA.image <- matrix(0,
         nrow=null.model$nrows,
@@ -358,7 +358,7 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
     line.widths <- rep(1,total.images+1)
     line.widths[[total.images+1]] <- 2 #for the mean distribution
 
-    ngrid=200
+    ngrid <- 200
 
 
     #also dump the data to a file
@@ -400,7 +400,7 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
 
 }
 
-compute_and_save_xi_and_p_ul_t = function(results,config,masks){
+compute_and_save_xi_and_p_ul_t <- function(results,config,masks){
 
     region.names <- masks$region_names
     masks <-masks$mask_files
@@ -417,7 +417,7 @@ compute_and_save_xi_and_p_ul_t = function(results,config,masks){
         return(xi.distributions$status)
     }
 
-    region.names = append(region.names,"C")
+    region.names <- append(region.names,"C")
     masks <- append(masks,"complimentary")
     i <- 0
 
@@ -449,29 +449,29 @@ compute_and_save_xi_and_p_ul_t = function(results,config,masks){
     )),file=file.path(config$output_dir,'p_ul.values.txt'))
 }
 
-compute_and_save_xi_and_p.ul= function(results,config,masks){
-    output_images = get_output_images(results)
-    null_file = config$null_file
-    mask_files = masks$mask_files
-    region_names = masks$region_names
-    n_iter = config$max_iter
-    thin = config$thin
+compute_and_save_xi_and_p.ul <- function(results,config,masks){
+    output_images <- get_output_images(results)
+    null_file <- config$null_file
+    mask_files <- masks$mask_files
+    region_names <- masks$region_names
+    n_iter <- config$max_iter
+    thin <- config$thin
 
-    payloads = list()
+    payloads <- list()
 
     #weird, the type shows up as char and length(mask_files) gives a vector!!
-    n_masks = 0
-    for(mask in mask_files) n_masks = n_masks + 1
+    n_masks <- 0
+    for(mask in mask_files) n_masks <- n_masks + 1
 
     for(i in 1:n_masks){
-        payloads[[i]]=list(images=output_images
+        payloads[[i]] <- list(images=output_images
             ,mask_file=mask_files[[i]]
             ,null_file=null_file
             ,n_iter=n_iter
             ,thin=thin)
     }
 
-    cluster = parallel::makeCluster(1
+    cluster <- parallel::makeCluster(1
         #config$n_cores
                     #,outfile=""
                     )
@@ -483,7 +483,7 @@ compute_and_save_xi_and_p.ul= function(results,config,masks){
     })
     
     
-    results = parallel::parLapply(cluster,payloads,generate.distribution_xi.wrapper)
+    results <- parallel::parLapply(cluster,payloads,generate.distribution_xi.wrapper)
 
 
     cat('Computing the p-values\n')

@@ -25,26 +25,26 @@ setwd(getwd())
 #' n_cores: LIRA will be run simultaneously on n_cores each processing a different image.
 #'          Defaults to all the available cores. 
 #' @export
-detect_sources_LIRA = function(){
+detect_sources_LIRA <- function(){
     if(!file.exists('config.yaml')){
         stop('config.yaml does not exist')
     }
 
-    config.file = 'config.yaml'
-    config = get_config(config.file)
-    config = process_config(config)
+    config.file <- 'config.yaml'
+    config <- get_config(config.file)
+    config <- process_config(config)
 
     #generate the pixel masks
     cat('Generating pixel masks...')
-    masks = generate.mask_files(config)
+    masks <- generate.mask_files(config)
     if(masks$status$status_code !=0){
         return(list(output=NULL,status=status))
     }
     cat('Done\n')
-    payloads = generate.payloads(config)
+    payloads <- generate.payloads(config)
 
     cat('Running LIRA on all the images...')
-    cluster = parallel::makeCluster(config$n_cores
+    cluster <- parallel::makeCluster(config$n_cores
                 #,outfile=""
                 )
     parallel::clusterEvalQ(cluster,{
@@ -52,7 +52,7 @@ detect_sources_LIRA = function(){
         library(lira)
     })
     
-    results = parallel::parLapply(cluster,payloads,run_LIRA)
+    results <- parallel::parLapply(cluster,payloads,run_LIRA)
 
     parallel::stopCluster(cluster)
     cat('Done\n')
