@@ -1,4 +1,4 @@
-Package: lira.processor
+Package: lira.parallel
 Title: Parallel LIRA
 Version: 0.1
 Authors@R: 
@@ -18,7 +18,5 @@ Imports:
     parallel,
     tools,
     reticulate,
-    sm,
     spatstat,
-    knitr
 RoxygenNote: 6.1.1
