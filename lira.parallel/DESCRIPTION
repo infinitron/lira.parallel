@@ -19,4 +19,6 @@ Imports:
     tools,
     reticulate,
     spatstat,
+    knitr,
+    sm
 RoxygenNote: 6.1.1

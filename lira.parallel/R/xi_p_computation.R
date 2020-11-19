@@ -41,11 +41,11 @@ empty_datastructure_xi_distribution <- function(images,n_iter){
 }
 
 
-#' Compute the xi for all the iterations in each image
-#' This function takes list of output images, mask files, a null file, total number of iterations and the thinning factor
-#'  For each output image and for each mask file, it computes a distribution of Xi
-#'  Each output image is read once and computations are made on it
-#' @export
+# Compute the xi for all the iterations in each image
+# This function takes list of output images, mask files, a null file, total number of iterations and the thinning factor
+#  For each output image and for each mask file, it computes a distribution of Xi
+#  Each output image is read once and computations are made on it
+
 generate_distribution_xi_t <- function(images,mask_files,null_file,n_iter){
     #read all the masks into an array
     masks <- list()
@@ -165,8 +165,8 @@ write_FITS_image_with_wcs <- function(data,wcsfile.name){
     hdul$close()
 }
 
-#' Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
-#' @export
+# Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
+
 save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
     #take the xi distributions of each image and compute an upper limit on the p value
     #for the sake of consistency the qunatile will be estimated using the quantile function and also the quantile.density function
