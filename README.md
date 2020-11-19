@@ -84,6 +84,13 @@ Two p-values (upperlimits) are reported for each region. For the first one, the 
 * Runs LIRA on both the observed image and the baseline replicates. 
 * Post processes the output images from LIRA to extract the posterior distributions of <img src="https://render.githubusercontent.com/render/math?math=\xi">
 
+## Outputs
+The following outputs are generated
+* Default outputs from LIRA
+* An averaged additional component of the input observation
+* Rasterized region files
+* Matrix files for distributions of <img src="https://render.githubusercontent.com/render/math?math=\xi"> for all the input images for each region file (stored in \*all_dist.out files)
+
 ## Input preparation
 Python helper scripts to prepare inputs are located in the [input_prep](input_prep/) folder. These helper scripts are tailored for use with *Chandra* observations.
 
