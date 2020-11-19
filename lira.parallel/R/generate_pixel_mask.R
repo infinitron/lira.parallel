@@ -1,8 +1,7 @@
 # Generate a pixel mask from a region file that overlaps the image file.
 # The values of the pixels withing the region will be assigned one and zero to
 # the ones outside
-generate_pixel_mask_from_region_file = function(image_file,reg_file){
-
+generate_pixel_mask_from_region_file <- function(image_file,reg_file){
     # do the necessary imports
     
     #NOTE: for some reason reticulate doesn't find the contrib scripts
@@ -56,4 +55,3 @@ generate_pixel_mask_from_region_file = function(image_file,reg_file){
     )
 
 }
-#generate_pixel_mask_from_region_file('img_64x64_0.5.fits','core.reg')

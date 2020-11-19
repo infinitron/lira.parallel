@@ -83,12 +83,12 @@ launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FA
 	  param.file=paramsave,max.iter=maxIter, alpha.init=alpha.init,mcmc=mcmc)
 
 #Write PDF ofimages
-	pdf(pdfsave, width=12,height=4.25)
-	  par(mfrow=c(1,3))
-	  image(obsmat, xaxt="n", yaxt="n", main="Observed Data")
-	  image(psfmat, xaxt="n", yaxt="n", main="Null/Best-Fit/Background Model")
-	  image(img$final, xaxt="n", yaxt="n", main="Mean MultiScale of Data/Model MisMatch")
-	dev.off()
+	grDevices::pdf(pdfsave, width=12,height=4.25)
+	  graphics::par(mfrow=c(1,3))
+	  graphics::image(obsmat, xaxt="n", yaxt="n", main="Observed Data")
+	  graphics::image(psfmat, xaxt="n", yaxt="n", main="Null/Best-Fit/Background Model")
+	  graphics::image(img$final, xaxt="n", yaxt="n", main="Mean MultiScale of Data/Model MisMatch")
+	grDevices::dev.off()
 	
 	write(img$final,file=posteriorsave,ncolumns=obs$axDat$len[2])
 	#return(img)

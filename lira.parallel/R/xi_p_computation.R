@@ -3,7 +3,7 @@ get_matrix_from_fits <- function(file_name,fill.na=0){
     if(!file.exists(file_name)) return(list(data_mat=NULL,nrows=NULL,ncols=NULL))
 
     #readfits prints the filename. It will be suppressed
-    invisible(capture.output(data <- FITSio::readFITS(file_name)))
+    invisible(utils::capture.output(data <- FITSio::readFITS(file_name)))
 
     #set all non-finite values to zero
     data$imDat[!is.finite(data$imDat)] <- fill.na
@@ -18,19 +18,6 @@ get_matrix_from_fits <- function(file_name,fill.na=0){
 get_matrix_from_file <- function(file_name){
     if(!file.exists(file_name)) return(list(data_mat=NULL,nrows=NULL,ncols=NULL))
 }
-
-
-
-generate.distribution_xi.wrapper <- function(payload){
-    return(
-        generate.distribution_xi(payload$images
-                                ,payload$mask_file
-                                ,payload$null_file
-                                ,payload$n_iter
-                                ,payload$thin)
-    )
-}
-
 
 empty_datastructure_xi_distribution <- function(images,n_iter){
     ds <- list()
@@ -107,11 +94,11 @@ generate_distribution_xi_t <- function(images,mask_files,null_file,n_iter){
 
         #read the image
         if(!file.exists(out.imagename)){
-            print('File %s does not exist' %--% image_file)
+            print('File %s does not exist' %--% out.imagename)
             next
         }
         #read the output image; TODO: figure out an efficient way to get output from LIRA
-        image.df <- data.matrix(read.table(out.imagename))
+        image.df <- data.matrix(utils::read.table(out.imagename))
 
         #treat the NANs
         image.df[!is.finite(image.df)] <- 0
@@ -185,10 +172,10 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
     gamma=0.005
 
     #compute c using quantile
-    c <- quantile(10^simulated.xi.distribution.all, 1-gamma)
+    c <- stats::quantile(10^simulated.xi.distribution.all, 1-gamma)
     
     #compute c using quantile.density
-    c2 <- spatstat::quantile.density(density(10^(simulated.xi.distribution.all)),1-gamma)
+    c2 <- spatstat::quantile.density(stats::density(10^(simulated.xi.distribution.all)),1-gamma)
 
     t_c.yobs <- 1/total.lira.draws * sum(10^observed.xi.distribution>=c)
 
@@ -226,7 +213,7 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
 
     #TODO: Let the user add the customization
     tryCatch({
-        pdf(file.path(out.dir,paste(region.name,".pdf",sep="")),width=12,height=4.25)
+        grDevices::pdf(file.path(out.dir,paste(region.name,".pdf",sep="")),width=12,height=4.25)
             sm::sm.density.compare(
                 unlist(c(observed.xi.distribution,simulated.xi.distribution.all,simulated.xi.distribution.all)),
                 xi.distribution.groups,
@@ -236,7 +223,7 @@ save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
                 ngrid=ngrid,
                 xlab="Log10(Xi)"
             )
-        dev.off()
+        grDevices::dev.off()
     }, warning=function(warn){
         #do nothing
     },error=function(err){
