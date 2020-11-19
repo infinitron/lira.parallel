@@ -98,7 +98,7 @@ generate.payloads <- function(processed_config){
 }
 
 #Generate a pixel mask (image) for each mask file
-generate.mask_files = function(config){
+generate.mask_files <- function(config){
     obs_file <- config$obs_file
     regions <- config$regions
     masks <- c()

@@ -38,7 +38,7 @@ detect_sources_LIRA <- function(){
     cat('Generating pixel masks...')
     masks <- generate.mask_files(config)
     if(masks$status$status_code !=0){
-        return(list(output=NULL,status=status))
+        return(list(output=NULL,status=masks$status$status))
     }
     cat('Done\n')
     payloads <- generate.payloads(config)
