@@ -20,80 +20,6 @@ get_matrix_from_file <- function(file_name){
 }
 
 
-#' Compute the xi for all the iterations in each image
-#' @export
-generate.distribution_xi <- function(images,mask_file,null_file,n_iter,thin=1){
-    
-
-
-    #print(images)
-    #print('in')
-    #read each mask in to a matrix
-    region_mat_obj <- get_matrix_from_fits(mask_file)
-    #print('out')
-    #print(names(region_mat_obj))
-    if(is.null(region_mat_obj$data_mat)){
-        print('File %s does not exist' %--% mask_file )
-        return(list(output=NULL,generate.status(-1,'File %s does not exist' %--% mask_file)))
-    }
-
-    np = reticulate::import("numpy")
-    null_mat_obj <- get_matrix_from_fits(null_file)
-
-    
-    #compute the null counts
-    nrows <- null_mat_obj$nrows
-    ncols <- null_mat_obj$ncols
-    mask_counts.frac <- sum(region_mat_obj$data_mat)/(nrows*ncols)
-    total_null_counts <- sum(null_mat_obj$data_mat) * mask_counts.frac
-    #print(total_null_counts)
-    null_counts <- sum(null_mat_obj$data_mat * region_mat_obj$data_mat)
-    null_nrows <- null_mat_obj$nrows
-
-    # For each image, compute the distribution of Xi
-    xi.distribution.region <-list()
-    n_images <- length(images)
-    xi.all_iter <- matrix(0,nrow=n_images,ncol=as.integer(n_iter/thin))
-
-    for(im_number in 1:n_images){
-
-        #read the image
-        #This image contains all the draws from LIRA
-        image_file <- images[[im_number]]
-
-        if(!file.exists(image_file)){
-            print('File %s does not exist' %--% image_file)
-            next
-        }
-
-        im_mat <- np$loadtxt(image_file)
-
-        im_mat_obj <- list(data_mat=im_mat,nrows=dim(im_mat)[[1]],ncols=dim(im_mat)[[2]])
-
-
-        xi.iteration_wise <- c()
-
-        for(i in seq(1,im_mat_obj$nrows,null_nrows)){
-
-            image_iter <- im_mat_obj$data_mat[i:(i+null_nrows-1),]
-            #transpose the matrix read from numpy since the LIRA output images are joined side ways and not top bottom
-            im_counts <- sum(t(image_iter) * region_mat_obj$data_mat)
-            if(im_counts==0) {
-                log_xi <- -8.5 #some far away value so as to not to interfere with the rest of the distribution
-            }else{
-                log_xi <- log(im_counts/(im_counts+null_counts),10)
-            }
-            
-
-            xi.iteration_wise <- c(xi.iteration_wise,log_xi)
-        }
-
-        xi.all_iter[im_number,] <- xi.iteration_wise
-
-    }
-
-    return(list(output=xi.all_iter,status=generate.status(0,''),total_null_counts=null_counts))
-}
 
 generate.distribution_xi.wrapper <- function(payload){
     return(
@@ -105,79 +31,6 @@ generate.distribution_xi.wrapper <- function(payload){
     )
 }
 
-#' Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
-#' @export
-save_distributions_xi <- function(distributions,region_name,out_dir){
-
-    #print('in')
-    #first row contains the obs vs baseline
-    #the rest would contain replicas vs baseline
-
-    dims = dim(distributions)
-    nrows = dims[[1]]
-    ncols = dims[[2]]
-
-    # transform the vector to have all the distributions on a single row
-    all_dist_vec = matrix(t(distributions),nrow=1)
-
-    #compute the upper bound
-    gamma = 0.005
-    c = quantile(10^(all_dist_vec[1,(ncols+1):(nrows*ncols)]),1-gamma)
-    c2=spatstat::quantile.density(density(10^(all_dist_vec[1,(ncols+1):(nrows*ncols)])),1-gamma)
-    
-    t_c.yobs = 1/(ncols)*sum(10^(all_dist_vec[,1:ncols])>=c)
-    t_c2.yobs = 1/(ncols)*sum(10^(all_dist_vec[,1:ncols])>=c2)
-
-    #cat("c: ",c,", c2: ",c2,", tc: ",t_c.yobs,", tc2: ",t_c2.yobs,"\n")
-    if(t_c.yobs==0) t_c.yobs=gamma
-    if(t_c2.yobs==0) t_c2.yobs=gamma
-    p.value.upper_lim = gamma/t_c.yobs
-    p.value.upper_lim2 = gamma/t_c2.yobs
-
-    if(p.value.upper_lim>1)p.value.upper_lim=1
-    if(p.value.upper_lim2>1)p.value.upper_lim2=1
-
-
-    groups = rep(1:nrows,rep(ncols,nrows))
-    groups = c(groups,rep(nrows+1,(nrows-1)*ncols))
-    colors = rep("gray",nrows)
-    colors[[1]] = "cyan"
-    colors=c(colors,"black") #for the mean curve
-
-    all_dist_vec = c(all_dist_vec[1,],all_dist_vec[1,(ncols+1):(nrows*ncols)])
-    line_types = rep(2,(nrows+1))
-    line_types[[1]] = 1
-    line_types[(nrows+1)]=1
-
-
-    line_widths = rep(1,(nrows+1))
-    line_widths[(nrows+1)] = 2
-
-    #graphing options
-    #xlim = c(-10,0)
-    #ylim=c(0,1)
-    ngrid=200
-
-
-    
-    #save the distribution as a pdf
-    pdf(file.path(out_dir,paste(region_name,".pdf",sep="")), width=12,height=4.25)
-        sm::sm.density.compare(all_dist_vec,groups,col=colors,lty=line_types,lwd=line_widths
-                #,xlim=xlim
-                #,ylim=ylim
-                ,ngrid=ngrid)
-    dev.off()
-
-    #also dump the data to a file
-    cat(all_dist_vec,file=file.path(out_dir,paste(region_name,"_all_dist.out",sep="")))
-    cat(groups,file=file.path(out_dir,paste(region_name,"_groups.out",sep="")))
-
-    return(list(
-        p_value=p.value.upper_lim
-        ,p_value2 = p.value.upper_lim2
-        ,status=generate.status(0,'')    
-    ))
-}
 
 empty_datastructure_xi_distribution <- function(images,n_iter){
     ds <- list()
@@ -187,9 +40,12 @@ empty_datastructure_xi_distribution <- function(images,n_iter){
     return(ds)
 }
 
-#This function takes list of output images, mask files, a null file, total number of iterations and the thinning factor
-#For each output image and for each mask file, it computes a distribution of Xi
-#Each output image is read once and computations are made on it
+
+#' Compute the xi for all the iterations in each image
+#' This function takes list of output images, mask files, a null file, total number of iterations and the thinning factor
+#'  For each output image and for each mask file, it computes a distribution of Xi
+#'  Each output image is read once and computations are made on it
+#' @export
 generate_distribution_xi_t <- function(images,mask_files,null_file,n_iter){
     #read all the masks into an array
     masks <- list()
@@ -309,6 +165,8 @@ write_FITS_image_with_wcs <- function(data,wcsfile.name){
     hdul$close()
 }
 
+#' Take the distibutions of xi, save them as pdf/mat files, and compute the upper bound on p value
+#' @export
 save_distribution_xi_t <- function(xi.distribution,region.name,out.dir){
     #take the xi distributions of each image and compute an upper limit on the p value
     #for the sake of consistency the qunatile will be estimated using the quantile function and also the quantile.density function
@@ -449,56 +307,4 @@ compute_and_save_xi_and_p_ul_t <- function(results,config,masks){
     )),file=file.path(config$output_dir,'p_ul.values.txt'))
 }
 
-compute_and_save_xi_and_p.ul <- function(results,config,masks){
-    output_images <- get_output_images(results)
-    null_file <- config$null_file
-    mask_files <- masks$mask_files
-    region_names <- masks$region_names
-    n_iter <- config$max_iter
-    thin <- config$thin
-
-    payloads <- list()
-
-    #weird, the type shows up as char and length(mask_files) gives a vector!!
-    n_masks <- 0
-    for(mask in mask_files) n_masks <- n_masks + 1
-
-    for(i in 1:n_masks){
-        payloads[[i]] <- list(images=output_images
-            ,mask_file=mask_files[[i]]
-            ,null_file=null_file
-            ,n_iter=n_iter
-            ,thin=thin)
-    }
-
-    cluster <- parallel::makeCluster(1
-        #config$n_cores
-                    #,outfile=""
-                    )
-    parallel::clusterEvalQ(cluster,{
-        library(FITSio)
-        library(spatstat)
-        library(sm)
-        library(reticulate)
-    })
-    
-    
-    results <- parallel::parLapply(cluster,payloads,generate.distribution_xi.wrapper)
-
-
-    cat('Computing the p-values\n')
-    cat('---------------------------------','\n')
-    cat("Region","\t","p1","\t","p2","\n")
-    for(i in 1:n_masks){
-        xi.processed = save_distributions_xi(results[[i]]$output,region_names[[i]],config$output_dir)
-
-        cat(region_names[[i]]
-        ,"\t",round(xi.processed$p_value,3)
-        ,"\t",round(xi.processed$p_value2,3)
-        ,"\n")
-    }
-    cat('---------------------------------','\n')
-
-    parallel::stopCluster(cluster)
-}
 
