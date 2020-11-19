@@ -1,0 +1,14 @@
+---
+regions: [core_lira.reg,knot_lira.reg] #list of regions files to test for statistical significance
+obs_file: img_64x64_0.5.fits #input image file
+psf_file: core_psf.fits #input PSF file
+null_file: null_q1_c1.fits #the baseline model image file
+replica_im_template: "sim_null_%s.fits" #tempalate name for the baseline replicates
+n_replicas: 49 #number of baseline replicates
+max_iter: 2000 #total number of MCMC draws to be made
+burn_in: 1000 #Number of initial draws to discard 
+alpha_init: [0.3,0.4,0.5,0.6,0.7,0.8] #initial value of alpha. The number of values in this list must match the power of two in the image size
+thin: 1 #only every nth draw will be retained
+output_dir: "LIRA_outputs" #Directory to store all the outputs
+n_cores: 25 #Number of cores to run the program on. Each core runs LIRA on one image
+post_only: FALSE #If true, LIRA runs will not be performed and only the posterior densities will be calculated from the existing outputs

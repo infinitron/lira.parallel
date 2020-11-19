@@ -1,7 +1,7 @@
 #require(lira)
 #require(FITSio)
 
-launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FALSE,fit.bkg.scale=T,outDir='/data/reu/kmckeough/KM_lira/outputs/',maxIter,alpha.init,thin=1,burn=0,mcmc=TRUE){
+launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FALSE,fit.bkg.scale=T,outDir='/data/reu/kmckeough/KM_lira/outputs/',maxIter,alpha.init,thin=1,burn=0,mcmc=TRUE,postOnly=FALSE){
 
 #INPUTS:
 	#obsFile   - string;a 2^n x 2^n matrix which you would like to
@@ -25,6 +25,19 @@ launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FA
 #Extract data and format to array/matrix
 
 #Read in FITS files
+
+	#Create output file names		   		 
+	basename<-tools::file_path_sans_ext(obsFile)
+	outsave<-file.path(outDir,paste(basename,'.out',sep=''))
+	paramsave<-file.path(outDir,paste(basename,'.param',sep=''))
+	pdfsave<-file.path(outDir,paste(basename,'.pdf',sep=''))
+    posteriorsave<-file.path(outDir,paste(basename,'.posterior',sep=''))
+
+	if(postOnly==TRUE){
+		#don't process anything
+		return(list(out_images_file=outsave,params_file=paramsave,pdf_file=pdfsave,posterior_file=posteriorsave))
+	}
+
 	obs <- FITSio::readFITS(obsFile)
 	obsmat <- matrix(data=obs$imDat,nrow=obs$axDat$len[1],
 	ncol=obs$axDat$len[2])
@@ -62,12 +75,6 @@ launchLIRA<-function(obsFile,startFile=FALSE,mapFile=F, bkgFile=FALSE,psfFile=FA
 		   #nrow=psf$axDat$len[1])
 		   }else{
 		   psfmat<-matrix(1, 1, 1)}
-#Create output file names		   		 
-	basename<-tools::file_path_sans_ext(obsFile)
-	outsave<-file.path(outDir,paste(basename,'.out',sep=''))
-	paramsave<-file.path(outDir,paste(basename,'.param',sep=''))
-	pdfsave<-file.path(outDir,paste(basename,'.pdf',sep=''))
-    posteriorsave<-file.path(outDir,paste(basename,'.posterior',sep=''))
 
 #Run lira (see lira documentation for help)
 	img<-lira::lira(obs.matrix=obsmat, start.matrix=strtmat,map.matrix=mapmat,
