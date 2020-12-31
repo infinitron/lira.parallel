@@ -165,18 +165,8 @@ run_LIRA = function(payload){
             ,alpha.init=sample(payload$alpha_init)
             ,thin=payload$thin
             ,burn=payload$burn_in
-<<<<<<< Updated upstream
             ,postOnly=payload$post_only
-            ,mapFile=payload$exposure_map)
-=======
-<<<<<<< Updated upstream
-            ,postOnly=payload$post_only)
-=======
-            ,postOnly=payload$post_only
-            ,mapFile=payload$exposure_map)
->>>>>>> Stashed changes
->>>>>>> Stashed changes
-    
+            ,mapFile=payload$exposure_map)    
     return(
         list(
             output=lira_output,
