@@ -7,7 +7,11 @@ Authors@R:
            role = c("aut", "cre"),
            email = "karthikreddy311@gmail.com",
            comment = c(ORCID = "0000-0001-9018-9553"))
+<<<<<<< Updated upstream
 Description: A parallel processing wrapper for Low-counts Image Reconstruction Toolbox (LIRA).
+=======
+Description: A parallel processing wrapper for Low-counts Image Reconstruction Toolbox (LIRA; Stein et al. 2015, doi:10.1088/0004-637X/813/1/66). It will run LIRA on multiple images at once and combines the outputs in the post processing step to determine the upperlimits on the p-values for each specified ROI. 
+>>>>>>> Stashed changes
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

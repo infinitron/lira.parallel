@@ -1,4 +1,5 @@
-    #!/usr/bin/env python
+#!/usr/bin/env python
+
 
 import yaml
 from rebin_img import rebin_img
@@ -22,10 +23,10 @@ def prepare_the_params(params):
     return param_def
                 
 def get_param_definition():
-    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size','nH','add_gal','redshift','group','blur']
-    param_types = ['str','float','str','str','int','int','int','int','float','int','float','int','float']
-    param_req = [True,False,True,False,True,False,False,True,False,False,False,False,True]
-    default_params = [None, 0.5,None,None,50,50,64,32,None,0.0,0.0,10,0.25]
+    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size','nH','add_gal','redshift','group','blur','center','no_core']
+    param_types = ['str','float','str','str','int','int','int','int','float','int','float','int','float','list','int']
+    param_req = [True,False,True,False,True,False,False,True,False,False,False,False,True,False,True]
+    default_params = [None, 0.5,None,None,50,50,64,32,None,0.0,0.0,10,0.25,None,0]
 
     param_definition = {}
     for i in range(0,len(param_list)):
@@ -40,10 +41,10 @@ def create_the_inputs(params):
     image_file,core_cen,core_cen_adj = create_image(params['evt_file']['value'],
                  params['core_reg']['value'],
                  params['binsize']['value'],
-                 params['inp_size']['value'])
+                 params['inp_size']['value'],params['center']['value'])
     
-    print('Core centroid: {0}'.format(core_cen))
-    print('Core centroid-adjusted: {0}'.format(core_cen_adj))
+    print('Image center: {0}'.format(core_cen))
+    print('Image center-adjusted: {0}'.format(core_cen_adj))
     #raise()
     max_ra_dec = get_max_ra_dec(image_file,params['core_reg']['value'])
     #simulate the psf             
@@ -62,6 +63,7 @@ def create_the_inputs(params):
         ,params['core_reg']['value']
         ,params['binsize']['value']
         ,params['psf_size']['value']
+        ,None
         ,outfile='core_psf.fits')
 
 
@@ -69,7 +71,7 @@ def create_the_inputs(params):
     
 
     #create the baseline image and simulate images from it
-    simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'])
+    simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'],params['no_core']['value'])
         
 def get_max_ra_dec(img_file,reg_file):
     dmstat.punlearn()
@@ -100,13 +102,17 @@ def get_centroid_ra_dec(evt_file,reg_file):
     dmcoords(evt_file,option='sky',x=cntrd_phys[0],y=cntrd_phys[1],celfmt='deg')
     return (dmcoords.ra,dmcoords.dec)
  
-def create_image(evt_file,reg_file,binsize,nsize,outfile=None):
-    dmstat.punlearn()
-    #get the centroid of the image
-    dmstat("{0}[sky=region({1})][cols sky]".format(evt_file,reg_file),clip=True)
-    vals = [float(x) for x in dmstat.out_mean.split(',')]
-    xval=vals[0]
-    yval=vals[1]
+def create_image(evt_file,reg_file,binsize,nsize,center,outfile=None):
+
+    if center is None or len(center)==0:
+        dmstat.punlearn()
+        #get the centroid of the image
+        dmstat("{0}[sky=region({1})][cols sky]".format(evt_file,reg_file),clip=True)
+        vals = [float(x) for x in dmstat.out_mean.split(',')]
+        xval=vals[0]
+        yval=vals[1]
+    else:
+        xval,yval=center
 
     if(outfile is None):outfile = "img_{0}x{1}_{2}.fits".format(nsize,nsize,binsize)
     
@@ -114,7 +120,7 @@ def create_image(evt_file,reg_file,binsize,nsize,outfile=None):
     centroid = rebin_img(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
               binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
     
-    return (outfile,vals,centroid)
+    return (outfile,center or vals,centroid)
     
 #def create_psf_image(evt_file,reg_file,binsize,nsize,outfile=None):
 #    dmstat.punlearn()
@@ -133,7 +139,7 @@ def create_image(evt_file,reg_file,binsize,nsize,outfile=None):
 #    
 #    return (outfile,centroid)
 
-def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,nH=None,add_gal=0,redshift=0.0,group=10.0,blur):
+def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,nH=None,add_gal=0,redshift=0.0,group=10.0,blur=0.25):
     #extract the spectrum
     specextract.punlearn()
     print('Extracting the spectrum')
@@ -197,7 +203,7 @@ def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,
     return 'core_psf_sim_projrays.fits'
 
 #slightly modified version of kmc's code from astrostat/LIRA            
-def simulate_null_images(infile,psffile,num_sims,mcmciter=5000):
+def simulate_null_images(infile,psffile,num_sims,no_core,mcmciter=5000):
     print('Creating the null file')
     clean()
     set_stat("cstat")
@@ -205,19 +211,38 @@ def simulate_null_images(infile,psffile,num_sims,mcmciter=5000):
     load_image(infile)
     load_psf("mypsf", psffile)
     set_psf(mypsf)
-    set_model(gauss2d.q1+const2d.c0)
-    set_par(c0.c0,min=0)
+
+    if no_core>0:
+        set_model(const2d.c0)
+        set_par(c0.c0,min=0)
+    else:
+        set_model(gauss2d.q1+const2d.c0)
+        set_par(c0.c0,min=0)
     #set_par(q1.fwhm,max=0.5)
-    guess(q1)
+        guess(q1)
     fit()
     results = get_fit_results()
     save('core_source_fit.save', clobber=True)
     save_source('null_q1_c1.fits', clobber=True)
     covar()
+
+    if no_core:
+        for i in range(num_sims):
+            fake()
+            save_image("sim_null_{}.fits".format(i), clobber=True)
+        clean()
+        return 0
+
     normgauss1d.g1
     g1.pos=q1.fwhm
     g1.fwhm = get_covar_results().parmaxes[0]
-    #print(g1.fwhm)
+
+    #for i in range(num_sims):
+    #        fake()
+    #        save_image("sim_null_{}.fits".format(i), clobber=True)
+    #clean()
+    #return 0
+
     #check if there is a valid upper bound. 
     print(get_covar_results())
     if get_covar_results().parmaxes[0] is None or get_covar_results().parmins[1] is None or get_covar_results().parmins[0] is None:

@@ -29,7 +29,15 @@ LIRA processor depends on the following:
 After cloning/downloading the code, execute the following commands in the root directory to install the package.
 
 ### Using devtools (recommended)
+<<<<<<< Updated upstream
+**Note**: If the package lira is installed with a different name, please change it accordingly in the ```DESCRIPTION``` file.
+=======
+<<<<<<< Updated upstream
 
+=======
+**Note**: If the package lira is installed with a different name, please change it accordingly in the ```DESCRIPTION``` file.
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 ```bash
 $ cd lira.processor
 $ R
