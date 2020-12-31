@@ -50,7 +50,8 @@ process_config <- function(config){
         ,thin=1
         ,output_dir='LIRA_outputs'
         ,n_cores=n_cores
-        ,post_only=FALSE)
+        ,post_only=FALSE
+        ,exposure_map=FALSE)
 
     for (param in names(optional_params)){
         if(is.null(config[[param]])){
@@ -164,7 +165,17 @@ run_LIRA = function(payload){
             ,alpha.init=sample(payload$alpha_init)
             ,thin=payload$thin
             ,burn=payload$burn_in
+<<<<<<< Updated upstream
+            ,postOnly=payload$post_only
+            ,mapFile=payload$exposure_map)
+=======
+<<<<<<< Updated upstream
             ,postOnly=payload$post_only)
+=======
+            ,postOnly=payload$post_only
+            ,mapFile=payload$exposure_map)
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
     
     return(
         list(

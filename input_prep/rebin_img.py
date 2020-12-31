@@ -50,7 +50,7 @@ def rebin_img(infile="evt2.fits", outfile="test.fits",
         xmax = round(xcen3 + ((N+1)*B)*0.5,2)
         ymin = round(ycen3 - ((N-1)*B)*0.5,2)
         ymax = round(ycen3 + ((N+1)*B)*0.5,2)
-    newfile = "{}[bin x={}:{}:{},y={}:{}:{}][opt type=i4]".format(infile, xmin, xmax, B, ymin, ymax, B)
+    newfile = "{}[bin x={}:{}:#{},y={}:{}:#{}][opt type=i4]".format(infile, xmin, xmax, N, ymin, ymax, N)
     print(newfile)
 
     dmcopy.punlearn()

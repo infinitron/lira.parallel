@@ -41,7 +41,15 @@ detect_sources_LIRA <- function(){
         return(list(output=NULL,status=masks$status$status))
     }
     cat('Done\n')
+<<<<<<< Updated upstream
+<<<<<<<< Updated upstream:lira.parallel/R/run_lira_on_images.R
     payloads <- generate.payloads(config)
+========
+    payloads = generate.payloads(config)
+>>>>>>>> Stashed changes:lira.processor/R/run_lira_on_images.R
+=======
+    payloads <- generate.payloads(config)
+>>>>>>> Stashed changes
 
     cat('Running LIRA on all the images...')
     cluster <- parallel::makeCluster(config$n_cores
@@ -52,7 +60,15 @@ detect_sources_LIRA <- function(){
         library(lira)
     })
     
+<<<<<<< Updated upstream
+<<<<<<<< Updated upstream:lira.parallel/R/run_lira_on_images.R
     results <- parallel::parLapply(cluster,payloads,run_LIRA)
+========
+    results = parallel::parLapply(cluster,payloads,run_LIRA)
+>>>>>>>> Stashed changes:lira.processor/R/run_lira_on_images.R
+=======
+    results <- parallel::parLapply(cluster,payloads,run_LIRA)
+>>>>>>> Stashed changes
 
     parallel::stopCluster(cluster)
     cat('Done\n')

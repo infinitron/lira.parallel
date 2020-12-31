@@ -12,3 +12,8 @@ add_gal: 0 #Flag to decide whether the galactic nH must be an additional absorpt
 redshift: 0.0 #the redshift to be used in the absorption component 
 group: 10 #number of counts to group in to a single bin while fitting the spectrum of the core
 blur: 0.25 #aspect blur for simulating the PSF using MARX. See  https://cxc.cfa.harvard.edu/ciao/why/aspectblur.html for more details
+<<<<<<< Updated upstream
+=======
+center: []
+no_core: 0
+>>>>>>> Stashed changes
