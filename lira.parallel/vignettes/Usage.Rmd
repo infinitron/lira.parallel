@@ -94,7 +94,11 @@ Two p-values (upperlimits) are reported for each region. For the first one, the 
 * Post processes the output images from LIRA to extract the posterior distributions of <img src="https://render.githubusercontent.com/render/math?math=\xi">
 
 ## Input preparation
+<<<<<<< Updated upstream
 Python helper scripts to prepare inputs are located in the [input_prep](input_prep/) folder. These helper scripts are tailored for use with *Chandra* observations.
+=======
+Python helper scripts to prepare inputs are located in the [input_prep](https://github.com/infinitron/lira.parallel/tree/master/input_prep/) folder. These helper scripts are tailored for use with *Chandra* observations.
+>>>>>>> Stashed changes
 
  After configuring ```lira_input_prep.yaml``` in the folder with inputs (event files, region files), exceute ```create_inputs_for_lira.py```. This will:
 * Create a binned image from the events file
