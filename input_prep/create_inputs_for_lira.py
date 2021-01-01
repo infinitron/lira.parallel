@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 
+from prepare_spectra import prepare_spectra
 import yaml
 from rebin_img import rebin_img
 from rebin_psf import rebin_psf
@@ -8,7 +9,17 @@ from ciao_contrib.runtool import *
 from sherpa.astro.ui import *
 from sherpa_contrib.chart import *
 from sim_image import sim_image
-import os
+import logging
+import numpy as np
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+#initialize the logger
+logger = logging.getLogger("sherpa")
+logging.basicConfig(level=logging.INFO, filename="sherpa_session_for_lira.log", filemode="a")
+logger.info('\n\n\n')
+logger.info(datetime.now().strftime('%c'))
+logger.info('\n\n\n')
 
 def prepare_the_params(params):
     #parse the params and return the 
@@ -64,15 +75,39 @@ def create_the_inputs(params):
         ,params['binsize']['value']
         ,params['psf_size']['value']
         ,None
-        ,outfile='core_psf.fits')
+        ,outfile='core_psf.fits'
+        ,psf=True)
 
-
+    #print creating ecf profiles and plotting them
+    print('Creating ecf profiles')
+    compare_ecf_profiles(
+        params['evt_file']['value'],
+       simulated_psf_file,
+       psf_cen_adj[0],psf_cen_adj[1]
+    )
     print('PSF centroid-adjusted: {0}'.format(psf_cen_adj))
     
 
     #create the baseline image and simulate images from it
     simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'],params['no_core']['value'])
-        
+
+def compare_ecf_profiles(evt_file,psf_file,xcen,ycen,radius=20,binsize=0.2
+    ,ecf_fraction=[0.01,0.025,0.05,0.075,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.85,0.9,0.95,0.99]):
+    ecf_calc.punlearn()
+    ecf_calc(infile=evt_file,outfile='core_ecf.fits',xpos=xcen,ypos=ycen,radius=radius,binsize=binsize,clobber=True,fraction=ecf_fraction)
+    ecf_calc(infile=psf_file,outfile='psf_ecf.fits',xpos=xcen,ypos=ycen,radius=radius,binsize=binsize,clobber=True,fraction=ecf_fraction)
+
+    #load and plot them
+    load_data(1,'core_ecf.fits',colkeys=['r_mid','frac_in'])
+    load_data(2,'psf_ecf.fits',colkeys=['r_mid','frac_in'])
+
+    plot_data(1,yerrorbars=False,linestyle='solid',xlog=True,ylog=True)
+    plot_data(2,yerrorbars=False,linestyle='solid',overplot=True)
+
+    plt.savefig('ecf_profiles.eps')
+
+    
+
 def get_max_ra_dec(img_file,reg_file):
     dmstat.punlearn()
     dmstat("{0}[sky=region({1})]".format(img_file,reg_file))
@@ -102,7 +137,7 @@ def get_centroid_ra_dec(evt_file,reg_file):
     dmcoords(evt_file,option='sky',x=cntrd_phys[0],y=cntrd_phys[1],celfmt='deg')
     return (dmcoords.ra,dmcoords.dec)
  
-def create_image(evt_file,reg_file,binsize,nsize,center,outfile=None):
+def create_image(evt_file,reg_file,binsize,nsize,center,outfile=None,psf=False):
 
     if center is None or len(center)==0:
         dmstat.punlearn()
@@ -117,7 +152,11 @@ def create_image(evt_file,reg_file,binsize,nsize,center,outfile=None):
     if(outfile is None):outfile = "img_{0}x{1}_{2}.fits".format(nsize,nsize,binsize)
     
     print("Creating the input image file")
-    centroid = rebin_img(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
+    if not psf:
+        centroid = rebin_img(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
+              binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
+    else:
+        centroid = rebin_psf(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
               binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
     
     return (outfile,center or vals,centroid)
@@ -144,49 +183,48 @@ def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,
     specextract.punlearn()
     print('Extracting the spectrum')
     specextract(infile="{0}[sky=region({1})]".format(evt_file,core_reg),outroot="core_spectrum"
-    #,bkgfile="{0}[sky=region({1})]".format(evt_file,bkg_reg)
+    ,bkgfile="{0}[sky=region({1})]".format(evt_file,bkg_reg)
     ,clobber=True)  
     
-    #fit the spectrum
-    clean()
-    zFlag=False
-    print('Fitting the spectrum')
-    load_pha("core_spectrum.pi")
-    if (nH is not None) and (nH > 0.0):
-        if(add_gal==1):
-            set_source(xsphabs.gal*xszphabs.abs1*powlaw1d.srcp1)
-            gal.nH=nH
-            freeze(gal.nH)
-            zFlag=True
+    ##fit the spectrum
+    #clean()
+    #zFlag=False
+    #print('Fitting the spectrum')
+    #load_pha("core_spectrum.pi")
+    #if (nH is not None) and (nH > 0.0):
+        #if(add_gal==1):
+            #set_source(xsphabs.gal*xszphabs.abs1*powlaw1d.srcp1)
+            #gal.nH=nH
+            #freeze(gal.nH)
+            #zFlag=True
 
-        else:
-            set_source(xsphabs.abs1*powlaw1d.srcp1)
-            abs1.nH=nH
-            freeze(abs1.nH)
-    else:
-        set_source(xszphabs.abs1*powlaw1d.srcp1)
-        zFlag=True
-
-
-    if zFlag is True:
-        #print('REDSHIFT',redshift)
-        abs1.redshift=redshift
-        freeze(abs1.redshift)
+        #else:
+            #set_source(xsphabs.abs1*powlaw1d.srcp1)
+            #abs1.nH=nH
+            #freeze(abs1.nH)
+    #else:
+        #set_source(xszphabs.abs1*powlaw1d.srcp1)
+        #zFlag=True
 
 
-    
+    #if zFlag is True and add_gal==1:
+        ##print('REDSHIFT',redshift)
+        #abs1.redshift=redshift
+        #freeze(abs1.redshift)
 
-    group_counts(1,group)
-    ignore(":0.5")
-    ignore("7:")
-    show_filter()
-    show_model()
+    #set_stat("wstat")
+    #set_method('moncar')
+    #group_counts(1,group)
+    #ignore(":0.5")
+    #ignore("7:")
+    ##show_filter()
+    ##show_model()
 
-    fit()
-    covar()
-    save_chart_spectrum("core_flux_chart.dat", elow=0.5, ehigh=7.0)
-    clean()
-    
+    #fit()
+    #covar()
+    #save_chart_spectrum("core_flux_chart.dat", elow=0.5, ehigh=7.0)
+    #clean()
+    prepare_spectra(group,nH,add_gal)
     #get the ra dec from sky coords
     ra_dec = get_centroid_ra_dec(evt_file,core_reg)
     #dmcoords.punlearn()
@@ -258,10 +296,16 @@ def simulate_null_images(infile,psffile,num_sims,no_core,mcmciter=5000):
     set_sampler_opt('originalscale', [True, True, True, True, True])
     if mcmciter < num_sims*100:
         mcmciter = num_sims*100
-    stats, accept, params = get_draws(1,niter=mcmciter)
+
+    #the following code throws an error sometimes #bug 
+    try:
+        stats, accept, params = get_draws(1,niter=mcmciter)
+    except:
+        params = [np.repeat(q1.fwhm.val,mcmciter)]
+
     #print('Simulating the null files')
     for i in range(num_sims):
-        set_par(q1.fwhm,params[0][(i+1)*100])
+        set_par(q1.fwhm,params[0][(i+1)*100-1])
         fake()
         save_image("sim_null_{}.fits".format(i), clobber=True)
     save_all(outfile='lira_input_baseline_sim.log',clobber=True)
