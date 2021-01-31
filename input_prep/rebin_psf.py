@@ -51,7 +51,7 @@ def rebin_psf(infile="evt2.fits", outfile="test.fits",
         ymin = round(ycen3 - ((N-1)*B)*0.5,2)
         ymax = round(ycen3 + ((N+1)*B)*0.5,2)
     newfile = "{}[bin x={}:{}:#{},y={}:{}:#{}][opt type=r4]".format(infile, xmin, xmax, N, ymin, ymax, N)
-    print(newfile)
+    print('core_psf_bin_string ',"x={}:{}:#{},y={}:{}:#{}".format(xmin, xmax, N, ymin, ymax, N))
 
     dmcopy.punlearn()
     dmcopy(newfile, outfile, clobber=True)
