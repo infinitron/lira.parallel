@@ -29,7 +29,7 @@ generate_pixel_mask_from_region_file <- function(image_file,reg_file){
 
     #generate the temp and outfile names
     temp_file <- tempfile(pattern = "",tmpdir = ".", fileext = img_ext)
-    mask_file <- '%s%s%s%s' %--% c(img_basename, '_', reg_basename, img_ext)
+    mask_file <- '%s%s%s%s%s' %--% c(img_basename, '_', reg_basename,".", img_ext)
 
     ciao.runtool_py$dmimgcalc$punlearn()
     #create an 'ones' image with the same size
