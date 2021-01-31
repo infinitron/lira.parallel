@@ -1,3 +1,4 @@
+from numpy.core.numeric import full
 from sherpa.astro.io import read_pha
 from sherpa.optmethods import MonCar
 from sherpa.stats import WStat,CStat
@@ -12,7 +13,7 @@ from cstat_gof import gof_cstat
 from sherpa.astro.ui import *
 
 
-def prepare_spectra(group,nH,add_gal):
+def prepare_spectra(group,nH,add_gal,redshift):
     pha = read_pha('core_spectrum.pi')
     pha.set_analysis('energy')
     pha.notice(0.5, 7.0)
@@ -50,6 +51,7 @@ def prepare_spectra(group,nH,add_gal):
 
     full_model = RSPModelPHA(pha.get_arf(), pha.get_rmf(), pha, pha.exposure * model)
     
+    print(full_model)
 
     fit = Fit(pha, full_model,method=MonCar(),stat=WStat())
     res = fit.fit()
@@ -83,3 +85,19 @@ def prepare_spectra(group,nH,add_gal):
     set_data(pha)
     set_model(model)
     save_chart_spectrum("core_flux_chart.dat", elow=0.5, ehigh=7.0)
+    #save_chart_spectrum("core_flux_chart.rdb",format='text/tsv', elow=0.5, ehigh=7.0)
+    save_spectrum_rdb("core_flux_chart.dat")
+
+
+
+def save_spectrum_rdb(file):
+    outfile = 'core_flux_saotrace.rdb'
+    
+    
+    with open(outfile,'w') as f:
+        print('elo\tehi\tspectrum',file=f)
+        print('N\tN\tN',file=f)
+        with open(file,'r') as f2:
+            rows = f2.readlines()[3:]
+            for row in rows:
+                print('\t'.join(row.strip().split(' ')),file=f)
