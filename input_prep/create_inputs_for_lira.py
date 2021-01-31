@@ -8,7 +8,8 @@ from rebin_psf import rebin_psf
 from ciao_contrib.runtool import *
 from sherpa.astro.ui import *
 from sherpa_contrib.chart import *
-from sim_image import sim_image
+#from sim_image import sim_image
+from saotrace_helpers import run_sao_raytrace,run_sao_raytrace_parallel
 import logging
 import numpy as np
 from datetime import datetime
@@ -27,17 +28,17 @@ def prepare_the_params(params):
     
     #go through all the params and edit the if a user supplies it
     for key,defn in param_def.items():
-        if(defn['type']!=type(params[key]).__name__): raise("Incorrect value for {0}".format(key))
-        if(defn['required']) and not key in params: raise("{0} is required".format(key))
+        if(defn['required']) and not key in params: raise Exception("{0} is required".format(key))
+        if(defn['required'] and defn['type']!=type(params[key]).__name__): raise Exception("Incorrect value for {0}".format(key))
         if key in params: param_def[key]['value'] = params[key]
     
     return param_def
                 
 def get_param_definition():
-    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size','nH','add_gal','redshift','group','blur','center','no_core']
-    param_types = ['str','float','str','str','int','int','int','int','float','int','float','int','float','list','int']
-    param_req = [True,False,True,False,True,False,False,True,False,False,False,False,True,False,True]
-    default_params = [None, 0.5,None,None,50,50,64,32,None,0.0,0.0,10,0.25,None,0]
+    param_list = ['evt_file','binsize','core_reg','bkg_reg','n_psf_sims','n_null_sims','inp_size','psf_size','nH','add_gal','redshift','group','blur','center','no_core','sim_baselines','extract_spectra','fit_spectra']
+    param_types = ['str','float','str','str','int','int','int','int','float','int','float','int','float','list','bool','bool','bool','bool']
+    param_req = [True,False,True,False,True,False,False,True,False,False,False,False,True,False,True,False,False,False]
+    default_params = [None, 0.5,None,None,50,50,64,32,None,0.0,0.0,10,0.25,None,False,True,True,True]
 
     param_definition = {}
     for i in range(0,len(param_list)):
@@ -56,6 +57,7 @@ def create_the_inputs(params):
     
     print('Image center: {0}'.format(core_cen))
     print('Image center-adjusted: {0}'.format(core_cen_adj))
+    print(f'Image_file_name {image_file}')
     #raise()
     max_ra_dec = get_max_ra_dec(image_file,params['core_reg']['value'])
     #simulate the psf             
@@ -68,7 +70,9 @@ def create_the_inputs(params):
                 max_ra_dec[0],max_ra_dec[1],
                  params['nH']['value'],params['add_gal']['value'],params['redshift']['value']
                  ,params['group']['value'],
-                 params['blur']['value'])
+                 params['blur']['value'],
+                 params['extract_spectra']['value'],
+                 params['fit_spectra']['value'])
 
     psf_file,psf_cen,psf_cen_adj = create_image(simulated_psf_file
         ,params['core_reg']['value']
@@ -79,17 +83,19 @@ def create_the_inputs(params):
         ,psf=True)
 
     #print creating ecf profiles and plotting them
-    print('Creating ecf profiles')
-    compare_ecf_profiles(
-        params['evt_file']['value'],
-       simulated_psf_file,
-       psf_cen_adj[0],psf_cen_adj[1]
-    )
+    #print('Creating ecf profiles')
+    #compare_ecf_profiles(
+    #    params['evt_file']['value'],
+    #   simulated_psf_file,
+    #   psf_cen_adj[0],psf_cen_adj[1]
+    #)
     print('PSF centroid-adjusted: {0}'.format(psf_cen_adj))
+    print(f'psf_cntr_adj {psf_cen_adj[0]}_{psf_cen_adj[1]}')
     
 
     #create the baseline image and simulate images from it
-    simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'],params['no_core']['value'])
+    if params['sim_baselines']['value']:
+        simulate_null_images(image_file,'core_psf.fits',params['n_null_sims']['value'],params['no_core']['value'])
 
 def compare_ecf_profiles(evt_file,psf_file,xcen,ycen,radius=20,binsize=0.2
     ,ecf_fraction=[0.01,0.025,0.05,0.075,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.85,0.9,0.95,0.99]):
@@ -160,83 +166,42 @@ def create_image(evt_file,reg_file,binsize,nsize,center,outfile=None,psf=False):
               binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
     
     return (outfile,center or vals,centroid)
-    
-#def create_psf_image(evt_file,reg_file,binsize,nsize,outfile=None):
-#    dmstat.punlearn()
-#    #get the centroid of the image
-#    dmstat("{0}[sky=region({1})][cols sky]".format(evt_file,reg_file))
-#    
-#    vals = [float(x) for x in dmstat.out_mean.split(',')]
-#    xval=vals[0]
-#    yval=vals[1]
-#
-#    if(outfile is None):outfile = "img_{0}x{1}_{2}.fits".format(nsize,nsize,binsize)
-#    
-#    print("Creating the input image file")
-#    centroid = rebin_psf(infile="{0}[energy=500:7000]".format(evt_file),outfile=outfile,
-#              binsize=binsize, nsize=nsize, xcen=xval,ycen=yval)
-#    
-#    return (outfile,centroid)
 
-def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,nH=None,add_gal=0,redshift=0.0,group=10.0,blur=0.25):
+
+def sim_core_psf(evt_file,npsf_sims,core_reg,bkg_reg,binsize,psf_size,xcen,ycen,nH=None,add_gal=0,redshift=0.0,group=10.0,blur=0.25,extract_spectra=True,fit_spectra=True):
     #extract the spectrum
-    specextract.punlearn()
-    print('Extracting the spectrum')
-    specextract(infile="{0}[sky=region({1})]".format(evt_file,core_reg),outroot="core_spectrum"
-    ,bkgfile="{0}[sky=region({1})]".format(evt_file,bkg_reg)
-    ,clobber=True)  
+
+    if extract_spectra:
+        specextract.punlearn()
+        print('Extracting the spectrum')
+
+        specextract(infile="{0}[sky=region({1})]".format(evt_file,core_reg),outroot="core_spectrum"
+        ,bkgfile="{0}[sky=region({1})]".format(evt_file,bkg_reg)
+        ,clobber=True)  
     
     ##fit the spectrum
-    #clean()
-    #zFlag=False
-    #print('Fitting the spectrum')
-    #load_pha("core_spectrum.pi")
-    #if (nH is not None) and (nH > 0.0):
-        #if(add_gal==1):
-            #set_source(xsphabs.gal*xszphabs.abs1*powlaw1d.srcp1)
-            #gal.nH=nH
-            #freeze(gal.nH)
-            #zFlag=True
-
-        #else:
-            #set_source(xsphabs.abs1*powlaw1d.srcp1)
-            #abs1.nH=nH
-            #freeze(abs1.nH)
-    #else:
-        #set_source(xszphabs.abs1*powlaw1d.srcp1)
-        #zFlag=True
-
-
-    #if zFlag is True and add_gal==1:
-        ##print('REDSHIFT',redshift)
-        #abs1.redshift=redshift
-        #freeze(abs1.redshift)
-
-    #set_stat("wstat")
-    #set_method('moncar')
-    #group_counts(1,group)
-    #ignore(":0.5")
-    #ignore("7:")
-    ##show_filter()
-    ##show_model()
-
-    #fit()
-    #covar()
-    #save_chart_spectrum("core_flux_chart.dat", elow=0.5, ehigh=7.0)
-    #clean()
-    prepare_spectra(group,nH,add_gal)
+    if fit_spectra:
+        prepare_spectra(group,nH,add_gal,redshift)
+    
     #get the ra dec from sky coords
     ra_dec = get_centroid_ra_dec(evt_file,core_reg)
-    #dmcoords.punlearn()
-    #dmcoords(evt_file,option='sky',x=xcen,y=ycen,celfmt='deg')
-     
+
     #simulate the psf
     print('Simulating the psf')
+    saotrace=True
     simulate_psf.punlearn()
-    simulate_psf(infile=evt_file,outroot="core_psf_sim",spectrum='core_flux_chart.dat',numiter=npsf_sims,ra=ra_dec[0],dec=ra_dec[1],binsize=binsize
-    ,blur=blur  
-    #,minsize=psf_size
-    )
+    if saotrace:
+        print('Raytracing using SAOTrace')
+        rayfiles = run_sao_raytrace_parallel(evt_file,ra_dec[0],ra_dec[1],npsf_sims)
+        print('Projecting on to the detector')
+        simulate_psf(infile=evt_file,outroot="core_psf_sim",simulator='file',rayfile=rayfiles,projector='marx',blur=blur,pixadj="none",binsize=binsize
+        ,ra=ra_dec[0],dec=ra_dec[1])
+    else:
+        simulate_psf(infile=evt_file,outroot="core_psf_sim",spectrum='core_flux_chart.dat',numiter=npsf_sims,ra=ra_dec[0],dec=ra_dec[1],binsize=binsize
+        ,blur=blur ,pixadj="none" 
+        #,minsize=psf_size
+        )
+
     save_all(outfile='lira_input_psfsim.log',clobber=True)
     return 'core_psf_sim_projrays.fits'
 
@@ -250,7 +215,7 @@ def simulate_null_images(infile,psffile,num_sims,no_core,mcmciter=5000):
     load_psf("mypsf", psffile)
     set_psf(mypsf)
 
-    if no_core>0:
+    if no_core:
         set_model(const2d.c0)
         set_par(c0.c0,min=0)
     else:
@@ -275,11 +240,6 @@ def simulate_null_images(infile,psffile,num_sims,no_core,mcmciter=5000):
     g1.pos=q1.fwhm
     g1.fwhm = get_covar_results().parmaxes[0]
 
-    #for i in range(num_sims):
-    #        fake()
-    #        save_image("sim_null_{}.fits".format(i), clobber=True)
-    #clean()
-    #return 0
 
     #check if there is a valid upper bound. 
     print(get_covar_results())
