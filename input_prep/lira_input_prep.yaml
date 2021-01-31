@@ -3,7 +3,7 @@ evt_file: acis_clean.fits #events file
 core_reg: core_lira.reg #Region file used to extract the spectrum and mesaure the center of the image
 bkg_reg: bkg_lira.reg #Background file. (Currently unused while fitting the spectrum)
 binsize: 0.5 #bin size of the image
-psf_size: 32 #size of the psf image. The pixel boundaries of the image file and the psf will be matched
+psf_size: 33 #size of the psf image. The pixel boundaries of the image file and the psf will be matched
 inp_size: 64 #size of the input image. Must be a power of 2
 n_psf_sims: 50 #number of simulations of the psf to perform before averaging
 n_null_sims: 50 #number of baseline replicates
@@ -12,5 +12,9 @@ add_gal: 0 #Flag to decide whether the galactic nH must be an additional absorpt
 redshift: 0.0 #the redshift to be used in the absorption component 
 group: 1 #number of counts to group in to a single bin while fitting the spectrum of the core
 blur: 0.25 #aspect blur for simulating the PSF using MARX. See  https://cxc.cfa.harvard.edu/ciao/why/aspectblur.html for more details
-center: []
-no_core: 0
+center: [] #center of the image
+no_core: true #Flag to indicate whether the point source should be excluded from the baseline model
+sim_baselines: false #Set this one to true to simulate baseline images
+extract_spectra: true
+fit_spectra: true
+
