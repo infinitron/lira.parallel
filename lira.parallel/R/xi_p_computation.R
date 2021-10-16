@@ -258,6 +258,10 @@ compute_and_save_xi_and_p_ul_t <- function(results,config,masks){
         config$max_iter
     )
 
+    if(config$n_replicas<1){
+        return(0);
+    }
+
     if(xi.distributions$status$status_code != 0){
         return(xi.distributions$status)
     }

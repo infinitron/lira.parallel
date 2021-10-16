@@ -26,6 +26,7 @@ setwd(getwd())
 #'          Defaults to all the available cores. 
 #' @export
 detect_sources_LIRA <- function(){
+    cat('lira.p v0.2\n')
     if(!file.exists('config.yaml')){
         stop('config.yaml does not exist')
     }
