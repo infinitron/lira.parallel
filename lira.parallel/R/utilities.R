@@ -31,13 +31,22 @@ process_config <- function(config){
     }
 
     #generate a vector of replicated images
-    replicated_images <- sapply(0:(config$n_replicas-1)
+    if(config$n_replicas>0){
+        
+        replicated_images <- sapply(0:(config$n_replicas-1)
             ,function(im){
                 return(config$replica_im_template %--% c(im))
             })
+        #all images for LIRA to be run on
+        config$all_obs_files <- c(config$obs_file,replicated_images)
+    }
+    else{
+        cat('Running lira in single-image mode.\n')
+        config$all_obs_files <- c(config$obs_file)
+    }
+    
 
-    #all images for LIRA to be run on
-    config$all_obs_files <- c(config$obs_file,replicated_images)
+    
 
     #if the number of cores are not set, use all cores by default
     n_cores <- parallel::detectCores()

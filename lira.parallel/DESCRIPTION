@@ -1,6 +1,6 @@
 Package: lira.parallel
 Title: Parallel LIRA
-Version: 0.1
+Version: 0.2
 Authors@R: 
     person(given = "Karthik",
            family = "Reddy",
@@ -25,7 +25,7 @@ Imports:
     utils,
     graphics,
     grDevices
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1
 VignetteBuilder: knitr
 Suggests: 
     rmarkdown
